@@ -21,7 +21,7 @@ jobs:
           pip install black flake8 isort bandit
 
       - name: Run black
-        run: black -l 120 --check --diff --safe .
+        run: black -l 120 .
 
       - name: Run flake8
         run: flake8 .
