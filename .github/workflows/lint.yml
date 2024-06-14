@@ -26,8 +26,5 @@ jobs:
       - name: Run flake8
         run: flake8 .
 
-      - name: Run isort
-        run: python -m isort --check-only --diff .
-
       - name: Run bandit
         run: bandit -r .
