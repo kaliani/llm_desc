@@ -25,7 +25,8 @@ os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
 
 # Initialize OpenAI and LangChain
 llm = ChatOpenAI(model="gpt-4-0125-preview")
-prompt = hub.pull("kaliani/generate_politicans")
+prompt_template = os.getenv("PROMPT_TEMPLATE")
+prompt = hub.pull(prompt_template)
 
 
 def get_wiki_info(name: str) -> Optional[str]:

@@ -6,7 +6,8 @@ from langchain import hub
 from celery_app.celery_config import config
 from service import create_politician_json
 
-prompt = hub.pull("kaliani/generate_politicans")
+prompt_template = os.getenv("PROMPT_TEMPLATE")
+prompt = hub.pull(prompt_template)
 
 celery_app = Celery(__name__)
 celery_app.config_from_object(config)
