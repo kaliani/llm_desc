@@ -3,10 +3,15 @@ from datetime import datetime
 
 from elastic import index_document, validate_document
 from models import MetadataItem, PoliticanDocs
-from utils import (clean_data, extract_returning_sources,
-                   filter_wikidata_results, filter_wikipedia_results,
-                   generate_politician_dossier, process_latest_result,
-                   search_elasticsearch)
+from utils import (
+    clean_data,
+    extract_returning_sources,
+    filter_wikidata_results,
+    filter_wikipedia_results,
+    generate_politician_dossier,
+    process_latest_result,
+    search_elasticsearch,
+)
 
 
 def create_politician_json(name: str, wikidataid: str, template):
