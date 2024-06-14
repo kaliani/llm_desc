@@ -1,8 +1,13 @@
 import json
 from datetime import datetime
+
+from elastic import index_document, validate_document
 from models import MetadataItem, PoliticanDocs
-from utils import generate_politician_dossier, search_elasticsearch, filter_wikipedia_results, filter_wikidata_results, process_latest_result, clean_data, extract_returning_sources
-from elastic import validate_document, index_document
+from utils import (clean_data, extract_returning_sources,
+                   filter_wikidata_results, filter_wikipedia_results,
+                   generate_politician_dossier, process_latest_result,
+                   search_elasticsearch)
+
 
 def create_politician_json(name: str, wikidataid: str, template):
     context, returning_sources, picture_source = get_context_and_sources(wikidataid)
@@ -16,20 +21,17 @@ def create_politician_json(name: str, wikidataid: str, template):
 
     updated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    metadata_item = MetadataItem(
-        sub_question="",
-        answer=""
-    )
+    metadata_item = MetadataItem(sub_question="", answer="")
 
     politician_docs = PoliticanDocs(
-        id=record_id or wikidataid[1:], 
+        id=record_id or wikidataid[1:],
         wikidataid=wikidataid,
         title=name,
         type=1,
         data=main_info,
         metadata=[metadata_item],
         createdAt=created_at,
-        updatedAt=updated_at
+        updatedAt=updated_at,
     )
 
     document_dict = politician_docs.model_dump()
@@ -44,14 +46,9 @@ def create_politician_json(name: str, wikidataid: str, template):
     else:
         return None
 
+
 def get_context_and_sources(wikidataid: str):
-    es_query_raw = {
-        "query": {
-            "match": {
-                "meta.id": wikidataid
-            }
-        }
-    }
+    es_query_raw = {"query": {"match": {"meta.id": wikidataid}}}
 
     response_raw = search_elasticsearch(index="eye-raw-data", query=es_query_raw)
 
@@ -65,27 +62,22 @@ def get_context_and_sources(wikidataid: str):
         context = ""
         returning_sources = "empty"
         picture_source = ""
-    
+
     return context, returning_sources, picture_source
 
+
 def get_record_id_and_creation_time(wikidataid: str):
-    es_query_clean = {
-        "query": {
-            "match": {
-                "wikidataid": wikidataid
-            }
-        }
-    }
+    es_query_clean = {"query": {"match": {"wikidataid": wikidataid}}}
 
     response_clean = search_elasticsearch(index="eye-clean-data", query=es_query_clean)
-    hits = response_clean.get('hits', {}).get('hits', [])
+    hits = response_clean.get("hits", {}).get("hits", [])
 
     if hits:
-        existing_record = hits[0]['_source']
-        record_id = hits[0]['_id']
-        created_at = existing_record['createdAt']
+        existing_record = hits[0]["_source"]
+        record_id = hits[0]["_id"]
+        created_at = existing_record["createdAt"]
     else:
         record_id = None
         created_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-    
+
     return record_id, created_at

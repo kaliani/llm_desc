@@ -1,10 +1,10 @@
 import os
-import httpx
+
 from celery import Celery, Task
+from langchain import hub
 
 from celery_app.celery_config import config
 from service import create_politician_json
-from langchain import hub
 
 prompt = hub.pull("kaliani/generate_politicans")
 

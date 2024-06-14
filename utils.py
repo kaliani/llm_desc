@@ -1,15 +1,18 @@
+import ast
+import json
 import os
 import re
-import json
-from typing import List, Optional, Dict
-from langchain_openai import ChatOpenAI
-from langchain import hub
-from langchain_community.document_loaders import WikipediaLoader
-from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
-from langchain.output_parsers import PydanticOutputParser
-from models import DataItem
+from typing import Dict, Optional
+
 from dotenv import load_dotenv
 from elasticsearch import Elasticsearch
+from langchain import hub
+from langchain.output_parsers import PydanticOutputParser
+from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate
+from langchain_community.document_loaders import WikipediaLoader
+from langchain_openai import ChatOpenAI
+
+from models import DataItem
 
 load_dotenv()
 
@@ -24,34 +27,31 @@ os.environ["LANGCHAIN_PROJECT"] = os.getenv("LANGCHAIN_PROJECT")
 llm = ChatOpenAI(model="gpt-4-0125-preview")
 prompt = hub.pull("kaliani/generate_politicans")
 
+
 def get_wiki_info(name: str) -> Optional[str]:
     try:
         docs = WikipediaLoader(query=name, load_max_docs=1).load()
         return docs
-    except:
+    except Exception as e:
+        print(f"An unexpected error occurred: {e}")
         return None
+
 
 def generate_politician_dossier(name: str, context: str, template: str = prompt.template) -> DataItem:
     parser = PydanticOutputParser(pydantic_object=DataItem)
 
     prompt = ChatPromptTemplate(
-        messages=[
-            HumanMessagePromptTemplate.from_template(
-                template
-            )
-        ],
+        messages=[HumanMessagePromptTemplate.from_template(template)],
         input_variables=["context", "name"],
         partial_variables={
             "format_instructions": parser.get_format_instructions(),
         },
     )
 
-    final_rag_chain = (
-        prompt
-        | llm
-    )
+    final_rag_chain = prompt | llm
     output = final_rag_chain.invoke({"context": context, "name": name})
     return output
+
 
 es_url = os.getenv("ELASTICSEARCH_URL")
 
@@ -59,6 +59,7 @@ if es_url is None:
     raise ValueError("ELASTICSEARCH_URL is not set in environment variables")
 
 es = Elasticsearch(es_url)
+
 
 def search_elasticsearch(index: str, query: Dict) -> Dict:
     response = es.search(index=index, body=query)
@@ -72,13 +73,13 @@ def filter_wikipedia_results(response: Dict) -> Optional[Dict]:
         timestamp = hit["_source"]["meta"]["timestamp"]
         if re.search(r"wikipedia\.org", source):
             wikipedia_results.append({"hit": hit, "timestamp": timestamp})
-    
+
     if wikipedia_results:
         latest_result = max(wikipedia_results, key=lambda x: x["timestamp"])
         return latest_result["hit"]
     else:
         return None
-    
+
 
 def filter_wikidata_results(response: Dict) -> Optional[str]:
     wikidata_results = []
@@ -93,11 +94,11 @@ def filter_wikidata_results(response: Dict) -> Optional[str]:
     if wikidata_results:
         latest_result = max(wikidata_results, key=lambda x: x["timestamp"])
         picture_source = next(
-            (item['data'] for item in latest_result['hit']['_source']['data'] if item.get('name') == 'image[0].source'),
-            None
+            (item["data"] for item in latest_result["hit"]["_source"]["data"] if item.get("name") == "image[0].source"),
+            None,
         )
         return picture_source
-    
+
     return None
 
 
@@ -106,7 +107,7 @@ def process_latest_result(latest_result: Optional[Dict]) -> str:
     if latest_result:
         for item in latest_result["_source"]["data"]:
             if item["data"] and item["name"]:
-                filtered_data[item["name"]] = item["data"]        
+                filtered_data[item["name"]] = item["data"]
         last_row_text = json.dumps(filtered_data, ensure_ascii=False, indent=2)
         return last_row_text[2:-2]
     return ""
@@ -123,8 +124,8 @@ def clean_data(text: str) -> str:
 
 def extract_returning_sources(latest_result: Optional[Dict]) -> str:
     try:
-        returning_sources = eval(latest_result["_source"]["event"]["original"])["meta"]["source"]
-    except (KeyError, SyntaxError) as e:
+        original_event = latest_result["_source"]["event"]["original"]
+        returning_sources = ast.literal_eval(original_event)["meta"]["source"]
+    except (KeyError, SyntaxError, ValueError):
         returning_sources = "empty"
     return returning_sources
-
