@@ -1,7 +1,5 @@
 import json
 from datetime import datetime
-
-from elastic import index_document, validate_document
 from models import MetadataItem, PoliticanDocs
 from utils import (
     clean_data,
@@ -12,6 +10,7 @@ from utils import (
     process_latest_result,
     search_elasticsearch,
 )
+from elastic import index_document, validate_document
 
 
 def create_politician_json(name: str, wikidataid: str, template):
@@ -66,7 +65,7 @@ def get_context_and_sources(wikidataid: str):
     else:
         context = ""
         returning_sources = "empty"
-        picture_source = ""
+        picture_source = "empty"
 
     return context, returning_sources, picture_source
 

@@ -96,7 +96,7 @@ def filter_wikidata_results(response: Dict) -> Optional[str]:
         latest_result = max(wikidata_results, key=lambda x: x["timestamp"])
         picture_source = next(
             (item["data"] for item in latest_result["hit"]["_source"]["data"] if item.get("name") == "image[0].source"),
-            None,
+            "empty",
         )
         return picture_source
 
