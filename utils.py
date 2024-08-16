@@ -96,9 +96,10 @@ def filter_wikidata_results(response: Dict) -> Optional[str]:
         latest_result = max(wikidata_results, key=lambda x: x["timestamp"])
         picture_source = next(
             (item["data"] for item in latest_result["hit"]["_source"]["data"] if item.get("name") == "image[0].source"),
-            "empty",
+            None,
         )
-        return picture_source
+
+        return latest_result, picture_source
 
     return None
 
@@ -130,3 +131,57 @@ def extract_returning_sources(latest_result: Optional[Dict]) -> str:
     except (KeyError, SyntaxError, ValueError):
         returning_sources = "empty"
     return returning_sources
+
+
+def process_political_info(data, category):
+    results = {}
+    base_key = f"{category}["
+
+    for item in data:
+        name = item.get("name", "")
+
+        if base_key in name:
+            key = int(name.split("[")[-1].split("]")[0])
+            if key not in results:
+                results[key] = {}
+
+            if name.endswith("]"):
+                results[key][category] = item["data"]
+            elif ".start time" in name:
+                results[key]["start_time"] = item["data"]
+            elif ".end time" in name:
+                results[key]["end_time"] = item["data"]
+
+    return results
+
+
+def get_entities(data, category):
+    if not data:
+        return ""
+
+    last_key = max(data.keys(), key=int)
+    return data[last_key].get(category, "")
+
+
+def get_usernames(data, platform):
+    pattern = re.compile(rf"^{platform} username\[\d+\]$")
+    usernames = [item["data"] for item in data if pattern.search(item.get("name", ""))]
+    return usernames
+
+
+def enrich_political_person(response):
+    position_held = "position held"
+    member_pol_parties = "member of political party"
+    country_citizenship = "country of citizenship"
+
+    latest_result, picture_source = filter_wikidata_results(response)
+    data = latest_result["hit"]["_source"]["data"]
+
+    positions = get_entities(process_political_info(data, position_held), position_held)
+    political_parties = get_entities(process_political_info(data, member_pol_parties), member_pol_parties)
+    citizenship = get_entities(process_political_info(data, country_citizenship), country_citizenship)
+    facebook = get_usernames(data, "Facebook")
+    instagram = get_usernames(data, "Instagram")
+    twitter = get_usernames(data, "X")
+
+    return picture_source, positions, political_parties, citizenship, facebook, instagram, twitter
