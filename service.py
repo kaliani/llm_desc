@@ -10,7 +10,7 @@ from utils import (
     search_elasticsearch,
     enrich_political_person,
 )
-from elastic import validate_document  # index_document
+from elastic import index_document, validate_document
 
 
 def get_context_and_sources(wikidataid: str, max_tokens: int = 29000):
@@ -104,12 +104,12 @@ def create_politician_json(name: str, wikidataid: str, template):
     if not validated_document:
         return None
 
-    return document_dict
-    # response = index_document(index="eye-clean-data", id=record_id, document=document_dict)
-    # if response:
-    #     return f"LLM Processing complete for Wikidata ID: {wikidataid}"
-    # else:
-    #     return None
+    # return document_dict
+    response = index_document(index="eye-clean-data", id=record_id, document=document_dict)
+    if response:
+        return f"LLM Processing complete for Wikidata ID: {wikidataid}"
+    else:
+        return None
 
 
 def get_record_id_and_creation_time(wikidataid: str):
